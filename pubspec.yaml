@@ -1,0 +1,41 @@
+name: fixypro
+description: "A new Flutter project."
+
+# El siguiente bloque evita que el paquete se publique accidentalmente en pub.dev
+publish_to: 'none' # Elimina esta línea si deseas publicar en pub.dev
+
+# Versión de la aplicación
+version: 1.0.0+1
+
+# Entorno requerido
+environment:
+  sdk: ">=3.5.3 <4.0.0"
+
+# Dependencias principales
+dependencies:
+  flutter:
+    sdk: flutter
+  google_maps_flutter: ^2.10.0
+  geolocator: ^13.0.2 # Última versión
+  shared_preferences: ^2.3.3
+  cupertino_icons: ^1.0.8
+  image_picker: ^1.1.2
+  # Si desarrollas para web, puedes mantener esta línea:
+  google_maps_flutter_web: ^0.5.10
+  image_picker_for_web: ^3.0.6
+  flutter_secure_storage: ^9.2.2
+  dio: ^5.7.0
+  fluttertoast: ^8.2.8
+  flutter_easyloading: ^3.0.5
+
+# Dependencias de desarrollo
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+# Configuración de Flutter
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

@@ -1,6 +1,6 @@
 import 'package:fixypro/proveedor/navigation/ofertas.dart';
 import 'package:fixypro/proveedor/navigation/servicios.dart';
-import 'package:fixypro/proveedor/navigation/tickets_3.dart';
+import 'package:fixypro/proveedor/navigation/tickets.dart';
 import 'package:flutter/material.dart';
 import 'home.dart';
 import 'profile.dart';
@@ -17,10 +17,9 @@ class _NavigationState extends State<Navigation> {
 
   static final List<Widget> _widgetOptions = <Widget>[
     const Profile(),
-    const Tickets3(),
+    const TicketsSupplierScreen(),
     const HomeScrean(),
     const ServiciosScreen(),
-    const OfertasScreen()
     // Otra pantalla
   ];
 
@@ -51,10 +50,6 @@ class _NavigationState extends State<Navigation> {
           BottomNavigationBarItem(
             icon: Icon(Icons.design_services),
             label: 'Servicios',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.local_offer),
-            label: 'Ofertas',
           ),
         ],
         currentIndex: _selectedIndex,

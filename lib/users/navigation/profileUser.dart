@@ -35,12 +35,28 @@ class _EditProfileState extends State<Profileuser> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false, // Quitar la flecha de navegación
         title: const Text(
           "FixyPro",
-          style: TextStyle(color: Colors.white, fontSize: 22),
+          style: TextStyle(
+            color: Colors.white, // Texto en blanco
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        backgroundColor: const Color(0xFFFFC107),
-        centerTitle: true,
+        backgroundColor: const Color(0xFFE4A320), // Fondo naranja
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.logout,
+              color: Colors.white, // Ícono en blanco
+            ),
+            onPressed: () {
+              // Navegar al login
+              Navigator.pushReplacementNamed(context, '/');
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -112,20 +128,6 @@ class _EditProfileState extends State<Profileuser> {
             ],
           ),
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFFFFC107),
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: ''),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: ''),
-        ],
       ),
     );
   }

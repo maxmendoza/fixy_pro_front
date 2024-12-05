@@ -62,13 +62,25 @@ class _ProblemasScreenState extends State<ProblemasScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("FixyPro"),
-        backgroundColor: Colors.blue,
+        automaticallyImplyLeading: false, // Quitar la flecha de navegación
+        title: const Text(
+          "FixyPro",
+          style: TextStyle(
+            color: Colors.white, // Texto en blanco
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: const Color(0xFFE4A320), // Fondo naranja
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(
+              Icons.logout,
+              color: Colors.white, // Ícono en blanco
+            ),
             onPressed: () {
-              // Para cuando se añadan más card
+              // Navegar al login
+              Navigator.pushReplacementNamed(context, '/');
             },
           ),
         ],

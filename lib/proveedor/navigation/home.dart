@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -134,15 +133,16 @@ class _HomeState extends State<HomeScrean> {
                     markers: _listMarkers,
                   ),
           ),
-          // Botón "Mis Ofertas" más grande
+          // Botón "Publicar Problema"
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             child: ElevatedButton(
               onPressed: () {
-                // Navegar a la sección de ofertas
+                // Navegar a la vista para publicar problema (reemplaza con la ruta correcta)
+                Navigator.pushNamed(context, '/hiring_order');
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF9F00),
+                backgroundColor: const Color(0xFF4A90E2), // Azul claro
                 padding: const EdgeInsets.symmetric(
                     vertical: 20, horizontal: 20), // Aumenta el padding
                 minimumSize:
@@ -152,7 +152,7 @@ class _HomeState extends State<HomeScrean> {
                 ),
               ),
               child: const Text(
-                'Mis Ofertas',
+                'Publicar Problema',
                 style: TextStyle(
                   fontSize: 22, // Tamaño de fuente más grande
                   fontWeight: FontWeight.bold,

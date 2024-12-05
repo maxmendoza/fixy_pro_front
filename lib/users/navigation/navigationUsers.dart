@@ -2,25 +2,24 @@ import 'package:fixypro/users/navigation/ProveedoresScreen.dart';
 import 'package:fixypro/users/navigation/homeUsers.dart';
 import 'package:fixypro/users/navigation/problemas.dart';
 import 'package:fixypro/users/navigation/profileUser.dart';
-import 'package:fixypro/users/navigation/tickets_1.dart';
+import 'package:fixypro/users/navigation/ticketsUsers.dart';
 import 'package:flutter/material.dart';
 
-class Navigation extends StatefulWidget {
-  const Navigation({super.key});
+class NavigationUsers extends StatefulWidget {
+  const NavigationUsers({super.key});
 
   @override
-  State<Navigation> createState() => _NavigationState();
+  State<NavigationUsers> createState() => _NavigationState();
 }
 
-class _NavigationState extends State<Navigation> {
+class _NavigationState extends State<NavigationUsers> {
   int _selectedIndex = 0;
 
   static final List<Widget> _widgetOptions = <Widget>[
     const Profileuser(),
-    const Tickets1(),
+    const TicketsUserScreen(),
     const HomeUsers(),
     const ProblemasScreen(),
-    const ProveedoresScreen()
     // Otra pantalla
   ];
 
@@ -51,10 +50,6 @@ class _NavigationState extends State<Navigation> {
           BottomNavigationBarItem(
             icon: Icon(Icons.design_services),
             label: 'Servicios',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.local_offer),
-            label: 'Ofertas',
           ),
         ],
         currentIndex: _selectedIndex,

@@ -1,31 +1,57 @@
-import 'package:fixypro/proveedor/screens/serviciosDetailsModal.dart';
-import 'package:fixypro/proveedor/screens/serviciosPublicarModal.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:fixypro/proveedor/screens/serviciosDetailsModal.dart';
 
 class ServiciosScreen extends StatefulWidget {
   const ServiciosScreen({super.key});
 
   @override
-  State<ServiciosScreen> createState() => _ServiciosScreenState();
+  _ServiciosScreenState createState() => _ServiciosScreenState();
 }
 
 class _ServiciosScreenState extends State<ServiciosScreen> {
-  final List<String> jobTypes = [
-    'Carpintería',
-    'Electricidad',
-    'Jardinería',
-    'Pintura',
-    'Plomería',
+  final List<Map<String, dynamic>> servicios = [
+    {
+      'titulo': 'Carpintería',
+      'categoria': 'Hogar',
+      'descripcion': 'Servicios de carpintería general.',
+      'nombre': 'Carpintería básica',
+      'precio_basico': '1000',
+      'precio_completo': '2000',
+      'imagen': 'assets/carpinteria.jpg',
+      'suspendido': false,
+    },
+    {
+      'titulo': 'Electricidad',
+      'categoria': 'Hogar',
+      'descripcion': 'Instalación y reparación eléctrica.',
+      'nombre': 'Electricidad avanzada',
+      'precio_basico': '1500',
+      'precio_completo': '3000',
+      'imagen': 'assets/electricidad.jpg',
+      'suspendido': false,
+    },
+    {
+      'titulo': 'Jardinería',
+      'categoria': 'Exterior',
+      'descripcion': 'Mantenimiento de jardines.',
+      'nombre': 'Cuidado de jardines',
+      'precio_basico': '800',
+      'precio_completo': '1600',
+      'imagen': 'assets/jardineria.jpg',
+      'suspendido': false,
+    },
   ];
 
-  String query = '';
-  List<String> filteredJobTypes = [];
+  List<Map<String, dynamic>> filteredServicios = [];
   bool isAscending = true; // Controla el orden actual (A-Z o Z-A)
+  String query = '';
+  final picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    filteredJobTypes = List.from(jobTypes);
+    filteredServicios = List.from(servicios);
   }
 
   void updateQuery(String newQuery) {
@@ -36,15 +62,16 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
   }
 
   void _applyFilters() {
-    filteredJobTypes = jobTypes
-        .where((job) => job.toLowerCase().contains(query.toLowerCase()))
+    filteredServicios = servicios
+        .where((servicio) =>
+            servicio['titulo'].toLowerCase().contains(query.toLowerCase()))
         .toList();
 
     // Ordenar según el estado actual (ascendente o descendente)
     if (isAscending) {
-      filteredJobTypes.sort((a, b) => a.compareTo(b));
+      filteredServicios.sort((a, b) => a['titulo'].compareTo(b['titulo']));
     } else {
-      filteredJobTypes.sort((a, b) => b.compareTo(a));
+      filteredServicios.sort((a, b) => b['titulo'].compareTo(a['titulo']));
     }
   }
 
@@ -55,6 +82,39 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
     });
   }
 
+  Future<void> _pickImage(int index) async {
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        servicios[index]['imagen'] = pickedFile.path;
+      });
+    }
+  }
+
+  void _showServiciosDetailsModal(
+      BuildContext context, Map<String, dynamic> servicio, int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return ServiciosDetailsModal(
+          servicio: servicio,
+          onToggleSuspension: (bool suspend) {
+            setState(() {
+              servicios[index]['suspendido'] = suspend;
+              _applyFilters();
+            });
+          },
+          onImageChange: (String newImage) {
+            setState(() {
+              servicios[index]['imagen'] = newImage;
+            });
+          },
+          onImagePick: () => _pickImage(index),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -62,24 +122,20 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false, // Quitar la flecha de navegación
+        automaticallyImplyLeading: false,
         title: const Text(
           "FixyPro",
           style: TextStyle(
-            color: Colors.white, // Texto en blanco
+            color: Colors.white,
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF063852), // Fondo azul oscuro
+        backgroundColor: const Color(0xFF063852),
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.logout,
-              color: Colors.white, // Ícono en blanco
-            ),
+            icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () {
-              // Navegar al login
               Navigator.pushReplacementNamed(context, '/');
             },
           ),
@@ -88,42 +144,14 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
       body: Column(
         children: [
           const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text(
-                  "Servicios disponibles",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  _showPublishModal(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF063852),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-                child: const Text(
-                  "Publicar servicio",
-                  style: TextStyle(fontSize: 14, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: TextField(
               decoration: InputDecoration(
-                labelText: 'Buscar',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                ),
-              ),
+                  labelText: 'Buscar',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16.0),
+                  )),
               onChanged: updateQuery,
             ),
           ),
@@ -141,28 +169,24 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
           const SizedBox(height: 10),
           Expanded(
             child: GridView.builder(
+              padding: const EdgeInsets.all(10),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: isLargeScreen ? 4 : 2,
+                childAspectRatio: 0.5,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: 0.6, // Ajuste de tarjetas más equilibrado
               ),
-              itemCount: filteredJobTypes.length,
+              itemCount: filteredServicios.length,
               itemBuilder: (context, index) {
+                final servicio = filteredServicios[index];
+                final isSuspended = servicio['suspendido'];
+
                 return GestureDetector(
-                  onTap: () {
-                    _showServiciosDetailsModal(context, {
-                      'titulo': 'Detalles del servicio',
-                      'categoria': filteredJobTypes[index],
-                      'descripcion': 'Descripción personalizada del servicio',
-                      'nombre': 'Servicio de ${filteredJobTypes[index]}',
-                      'precio_basico': '50 USD',
-                      'precio_completo': '100 USD',
-                    });
-                  },
+                  onTap: () =>
+                      _showServiciosDetailsModal(context, servicio, index),
                   child: Card(
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     elevation: 5,
                     child: Column(
@@ -172,7 +196,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
                           borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(10)),
                           child: Image.asset(
-                            'assets/images/descarga (3).jpg',
+                            servicio['imagen']!,
                             height: size.height * 0.2,
                             width: double.infinity,
                             fit: BoxFit.cover,
@@ -193,21 +217,31 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                filteredJobTypes[index],
+                                servicio['titulo']!,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: isLargeScreen ? 18 : 14,
+                                  fontSize: isLargeScreen ? 20 : 16,
+                                  color:
+                                      isSuspended ? Colors.grey : Colors.black,
                                 ),
                               ),
-                              const SizedBox(height: 5),
-                              const Text(
-                                'Descripción breve del servicio.',
-                                style: TextStyle(color: Colors.orange),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${servicio['categoria']} | \$${servicio['precio_basico']} - \$${servicio['precio_completo']}',
+                                style: TextStyle(
+                                  color:
+                                      isSuspended ? Colors.grey : Colors.orange,
+                                ),
                               ),
-                              const SizedBox(height: 5),
-                              const Text(
-                                "Detalles adicionales.",
-                                style: TextStyle(fontSize: 12),
+                              const SizedBox(height: 4),
+                              Text(
+                                servicio['descripcion']!,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isSuspended
+                                      ? Colors.grey
+                                      : Colors.grey[700],
+                                ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -217,31 +251,18 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
                         const Spacer(),
                         Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: SizedBox(
-                            width: double.infinity, // Botón más largo
-                            child: ElevatedButton(
-                              onPressed: () {
-                                _showServiciosDetailsModal(context, {
-                                  'titulo': 'Detalles del servicio',
-                                  'categoria': filteredJobTypes[index],
-                                  'descripcion':
-                                      'Reparaciones y mantenimiento profesional.',
-                                  'nombre':
-                                      'Servicio de ${filteredJobTypes[index]}',
-                                  'precio_basico': '50 USD',
-                                  'precio_completo': '100 USD',
-                                });
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF063852),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10),
-                              ),
-                              child: const Text(
-                                "Más información",
-                                style: TextStyle(
-                                    fontSize: 14, color: Colors.white),
-                              ),
+                          child: ElevatedButton(
+                            onPressed: () => _showServiciosDetailsModal(
+                                context, servicio, index),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isSuspended
+                                  ? Colors.grey
+                                  : const Color(0xFF063852),
+                            ),
+                            child: const Text(
+                              "Más información",
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.white),
                             ),
                           ),
                         ),
@@ -254,21 +275,6 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  void _showPublishModal(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => const ServicioPublicarModal(),
-    );
-  }
-
-  void _showServiciosDetailsModal(
-      BuildContext context, Map<String, String> servicio) {
-    showDialog(
-      context: context,
-      builder: (_) => ServiciosDetailsModal(servicio: servicio),
     );
   }
 }

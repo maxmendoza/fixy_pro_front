@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "816889092774",
+    "project_id": "fixy-pro-c83ab",
+    "storage_bucket": "fixy-pro-c83ab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:816889092774:android:26a1e25f3ab46e0ccd3267",
+        "android_client_info": {
+          "package_name": "com.fixypro.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBmgIlCSFx4CLVL03P6k-fWrEcIkPDAPM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

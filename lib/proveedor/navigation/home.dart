@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dio/dio.dart';
 
 class HomeScrean extends StatefulWidget {
   const HomeScrean({super.key});
@@ -16,13 +18,70 @@ class _HomeState extends State<HomeScrean> {
 
   CameraPosition? _initialPosition;
   final Set<Marker> _listMarkers = {};
-  String _selectedLocation = 'Casa 1';
-  final List<String> _locations = ['Casa 1', 'Casa 2', 'Casa 3'];
+  String? _selectedLocation;
+  List<Map<String, dynamic>> _userLocations = [];
+  final Dio _dio = Dio();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final String baseUrl = 'http://127.0.0.1:8080';
 
   @override
   void initState() {
     super.initState();
+    _configureDio();
     _initializeMap();
+    _fetchUserLocations();
+  }
+
+  void _configureDio() {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await _storage.read(key: 'auth_token');
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+        onError: (e, handler) {
+          debugPrint('Error en la solicitud: ${e.response?.data}');
+          handler.next(e);
+        },
+      ),
+    );
+  }
+
+  Future<void> _fetchUserLocations() async {
+    try {
+      final response = await _dio.get('$baseUrl/api/ubicaciones/usuario/8');
+      if (response.statusCode == 200) {
+        final data = List<Map<String, dynamic>>.from(response.data);
+        setState(() {
+          _userLocations = data;
+          _selectedLocation = _userLocations.isNotEmpty
+              ? _userLocations.first['direccion']
+              : null;
+
+          for (var location in _userLocations) {
+            _listMarkers.add(
+              Marker(
+                markerId: MarkerId(location['direccion']),
+                position: LatLng(location['latitud'], location['longitud']),
+                infoWindow: InfoWindow(
+                  title: location['direccion'],
+                ),
+              ),
+            );
+          }
+        });
+      }
+    } on DioException catch (e) {
+      debugPrint("Error al obtener ubicaciones: ${e.message}");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar ubicaciones: ${e.message}'),
+        ),
+      );
+    }
   }
 
   Future<void> _initializeMap() async {
@@ -74,51 +133,63 @@ class _HomeState extends State<HomeScrean> {
     return await Geolocator.getCurrentPosition();
   }
 
+  Future<void> _moveToSelectedLocation(String locationName) async {
+    final location = _userLocations.firstWhere(
+      (loc) => loc['direccion'] == locationName,
+      orElse: () => {},
+    );
+
+    if (location != null) {
+      final GoogleMapController mapController = await _controller.future;
+      final LatLng position = LatLng(location['latitud'], location['longitud']);
+      mapController.animateCamera(CameraUpdate.newLatLngZoom(position, 16));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false, // Quitar la flecha de navegación
+        automaticallyImplyLeading: false,
         title: const Text(
           "FixyPro",
           style: TextStyle(
-            color: Colors.white, // Texto en blanco
+            color: Colors.white,
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF063852), // Fondo azul oscuro
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.logout,
-              color: Colors.white, // Ícono en blanco
-            ),
-            onPressed: () {
-              // Navegar al login
-              Navigator.pushReplacementNamed(context, '/');
-            },
-          ),
-        ],
+        backgroundColor: const Color(0xFF063852),
       ),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: DropdownButton<String>(
-              value: _selectedLocation,
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedLocation = newValue!;
-                });
-              },
-              items: _locations.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              isExpanded: true,
+            child: Row(
+              children: [
+                Expanded(
+                  child: DropdownButton<String>(
+                    value: _selectedLocation,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _selectedLocation = newValue;
+                        if (newValue != null) {
+                          _moveToSelectedLocation(newValue);
+                        }
+                      });
+                    },
+                    items: _userLocations
+                        .map<DropdownMenuItem<String>>((location) {
+                      return DropdownMenuItem<String>(
+                        value: location['direccion'],
+                        child: Text(location['direccion']),
+                      );
+                    }).toList(),
+                    isExpanded: true,
+                    hint: const Text("Selecciona una ubicación"),
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -133,28 +204,25 @@ class _HomeState extends State<HomeScrean> {
                     markers: _listMarkers,
                   ),
           ),
-          // Botón "Publicar Problema"
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             child: ElevatedButton(
               onPressed: () {
-                // Navegar a la vista para publicar problema (reemplaza con la ruta correcta)
                 Navigator.pushNamed(context, '/hiring_order');
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4A90E2), // Azul claro
-                padding: const EdgeInsets.symmetric(
-                    vertical: 20, horizontal: 20), // Aumenta el padding
-                minimumSize:
-                    const Size(double.infinity, 70), // Aumenta la altura
+                backgroundColor: const Color(0xFF4A90E2),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                minimumSize: const Size(double.infinity, 70),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15), // Bordes más grandes
+                  borderRadius: BorderRadius.circular(15),
                 ),
               ),
               child: const Text(
                 'Publicar Problema',
                 style: TextStyle(
-                  fontSize: 22, // Tamaño de fuente más grande
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),

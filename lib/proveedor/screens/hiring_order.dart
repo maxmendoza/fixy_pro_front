@@ -1,8 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(const HiringOrder());
-}
+import 'package:image_picker/image_picker.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class HiringOrder extends StatelessWidget {
   const HiringOrder({super.key});
@@ -16,130 +18,298 @@ class HiringOrder extends StatelessWidget {
   }
 }
 
-class OrdenContratacion extends StatelessWidget {
+class OrdenContratacion extends StatefulWidget {
   const OrdenContratacion({super.key});
+
+  @override
+  State<OrdenContratacion> createState() => _OrdenContratacionState();
+}
+
+class _OrdenContratacionState extends State<OrdenContratacion> {
+  final Dio _dio = Dio();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final TextEditingController _tituloController = TextEditingController();
+  final TextEditingController _descripcionController = TextEditingController();
+  Uint8List? webImage;
+  File? selectedImage;
+  String categoria = 'PLOMERIA';
+  int? _selectedLocationId;
+  List<Map<String, dynamic>> _userLocations = [];
+  int? _userId; // ID del usuario en sesión
+  final String baseUrl = 'http://127.0.0.1:8080';
+
+  final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _configureDio();
+    _fetchUserProfile(); // Obtener el ID del usuario en sesión
+  }
+
+  // Configurar interceptores de Dio
+  void _configureDio() {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await _storage.read(key: 'auth_token');
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+        onError: (e, handler) {
+          debugPrint('Error en la solicitud: ${e.response?.data}');
+          handler.next(e);
+        },
+      ),
+    );
+  }
+
+  // Obtener perfil del usuario para recuperar el ID dinámicamente
+  Future<void> _fetchUserProfile() async {
+    try {
+      final response = await _dio.get('$baseUrl/user/profile');
+      if (response.statusCode == 200) {
+        setState(() {
+          _userId = response.data['id']; // Asignar ID del usuario
+        });
+        _fetchUserLocations(); // Cargar ubicaciones una vez que tengamos el ID
+      }
+    } on DioException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cargar perfil: ${e.message}')),
+      );
+    }
+  }
+
+  // Obtener ubicaciones del usuario
+  Future<void> _fetchUserLocations() async {
+    if (_userId == null) return;
+
+    try {
+      final response =
+          await _dio.get('$baseUrl/api/ubicaciones/usuario/$_userId');
+      if (response.statusCode == 200) {
+        final data = List<Map<String, dynamic>>.from(response.data);
+        setState(() {
+          _userLocations = data;
+          _selectedLocationId =
+              _userLocations.isNotEmpty ? _userLocations.first['id'] : null;
+        });
+      }
+    } on DioException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cargar ubicaciones: ${e.message}')),
+      );
+    }
+  }
+
+  // Seleccionar imagen
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      if (kIsWeb) {
+        final bytes = await image.readAsBytes();
+        setState(() {
+          webImage = bytes;
+        });
+      } else {
+        setState(() {
+          selectedImage = File(image.path);
+        });
+      }
+    }
+  }
+
+  // Crear problema
+  Future<void> _crearProblema() async {
+    if (_selectedLocationId == null ||
+        _tituloController.text.isEmpty ||
+        _descripcionController.text.isEmpty ||
+        (kIsWeb && webImage == null) ||
+        (!kIsWeb && selectedImage == null)) {
+      _showAlertDialog(
+          'Error', 'Por favor completa todos los campos requeridos.');
+      return;
+    }
+
+    // Codificar la imagen en Base64
+    String? base64Image;
+    if (kIsWeb && webImage != null) {
+      base64Image = base64Encode(webImage!);
+    } else if (!kIsWeb && selectedImage != null) {
+      base64Image = base64Encode(selectedImage!.readAsBytesSync());
+    }
+
+    final data = {
+      "titulo": _tituloController.text,
+      "descripcion": _descripcionController.text,
+      "categoria": categoria.toUpperCase(),
+      "fotografia": base64Image,
+      "ubicacionId": _selectedLocationId,
+    };
+
+    try {
+      final response = await _dio.post(
+        '$baseUrl/api/problemas/post',
+        data: data,
+        options: Options(headers: {"Content-Type": "application/json"}),
+      );
+
+      if (response.statusCode == 200) {
+        _showAlertDialog('Éxito', 'El problema ha sido creado exitosamente.');
+        _limpiarFormulario();
+      } else {
+        _showAlertDialog('Error',
+            'El servidor respondió con un código: ${response.statusCode}');
+      }
+    } catch (e) {
+      _showAlertDialog('Error', 'Error al enviar la solicitud: $e');
+    }
+  }
+
+  // Limpiar formulario después de crear problema
+  void _limpiarFormulario() {
+    setState(() {
+      _tituloController.clear();
+      _descripcionController.clear();
+      webImage = null;
+      selectedImage = null;
+      categoria = 'PLOMERIA';
+      _selectedLocationId =
+          _userLocations.isNotEmpty ? _userLocations.first['id'] : null;
+    });
+  }
+
+  // Mostrar alertas
+  void _showAlertDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/home');
+              },
+              child: const Text("Aceptar"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'FixyPro',
-          style: TextStyle(color: Colors.white, fontSize: 22),
-        ),
-        backgroundColor: const Color(0xFF033E6B), // Azul oscuro
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
+        title: const Text("FixyPro"),
+        backgroundColor: const Color(0xFF063852),
       ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _tituloController,
+              decoration: const InputDecoration(
+                labelText: 'Título del problema',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _descripcionController,
+              decoration: const InputDecoration(
+                labelText: 'Descripción del problema',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 4,
+            ),
+            const SizedBox(height: 16),
+            DropdownButton<int>(
+              value: _selectedLocationId,
+              onChanged: (int? newValue) {
+                setState(() {
+                  _selectedLocationId = newValue;
+                });
+              },
+              items: _userLocations.map<DropdownMenuItem<int>>((location) {
+                return DropdownMenuItem<int>(
+                  value: location['id'],
+                  child: Text(location['direccion']),
+                );
+              }).toList(),
+              isExpanded: true,
+              hint: const Text("Selecciona una ubicación"),
+            ),
+            const SizedBox(height: 16),
+            DropdownButton<String>(
+              value: categoria,
+              onChanged: (String? newValue) {
+                setState(() {
+                  categoria = newValue!;
+                });
+              },
+              items: ['CARPINTERIA', 'PLOMERIA', 'ELECTRICIDAD', 'ALBAÑILERIA']
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              isExpanded: true,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _pickImage,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey,
+              ),
+              child: const Text('Cargar Imagen'),
+            ),
+            if (kIsWeb && webImage != null)
+              Center(
+                child: Image.memory(
+                  webImage!,
+                  width: 150,
+                  height: 150,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            if (!kIsWeb && selectedImage != null)
+              Center(
+                child: Image.file(
+                  selectedImage!,
+                  width: 150,
+                  height: 150,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _crearProblema,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF42A5F5),
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.0),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Orden de Contratación',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 8, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Oferta del Cliente\n\$1500',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildExpansionTile('Datos del cliente'),
-                    _buildExpansionTile('Datos de la orden'),
-                    _buildExpansionTile('Fotografías'),
-                    _buildExpansionTile('Descripción del problema'),
-                    _buildExpansionTile('Dirección del Servicio'),
-                  ],
-                ),
+                minimumSize: const Size(double.infinity, 50),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFA726), // Botón naranja
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                child: const Text(
-                  'Confirmar Solicitud',
-                  style: TextStyle(color: Colors.white, fontSize: 18),
-                ),
+              child: const Text(
+                'Publicar Problema',
+                style: TextStyle(color: Colors.white, fontSize: 18),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF033E6B), // Azul oscuro
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.black,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.work),
-            label: '',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExpansionTile(String title) {
-    return ExpansionTile(
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text('Contenido de $title'),
-        ),
-      ],
     );
   }
 }

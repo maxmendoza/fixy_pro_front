@@ -4,10 +4,12 @@ import 'package:fixypro/Login/create_account.dart';
 import 'package:fixypro/Login/login.dart';
 import 'package:fixypro/proveedor/navigation/home.dart';
 import 'package:fixypro/proveedor/navigation/navigation.dart';
+import 'package:fixypro/proveedor/screens/chatSupplier.dart';
 import 'package:fixypro/proveedor/screens/hiring_order.dart';
 import 'package:fixypro/proveedor/navigation/profile.dart';
 import 'package:fixypro/users/navigation/homeUsers.dart';
 import 'package:fixypro/users/navigation/navigationUsers.dart';
+import 'package:fixypro/users/screens/chatUsers.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -31,6 +33,8 @@ class FixyProApp extends StatelessWidget {
         '/homeUsers': (context) => const NavigationUsers(),
         '/hiring_order': (context) => const HiringOrder(),
         '/profile': (context) => const Profile(),
+        '/chatUsers': (context) => const ChatUsers(),
+        '/chatSuppliers': (context) => const ChatSupplier()
       },
     );
   }
